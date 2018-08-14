@@ -9,7 +9,7 @@ with open('README.md', 'r') as fh:
 
 setup(
     name='nlpvocab',
-    version='1.0.1',
+    version='1.1.0',
     description='Frequency vocabulary for NLP purposes',
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -18,6 +18,12 @@ setup(
     author_email='shkarupa.alex@gmail.com',
     license='MIT',
     packages=find_packages(),
+    entry_points={
+        'console_scripts': [
+            'nlpvocab-words=nlpvocab:count_words',
+            'nlpvocab-chars=nlpvocab:count_chars',
+        ],
+    },
     test_suite='nose.collector',
     tests_require=['nose'],
     classifiers=[
