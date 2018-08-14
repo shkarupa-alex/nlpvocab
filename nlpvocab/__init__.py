@@ -2,10 +2,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from six.moves import cPickle
+import argparse
 import collections
+import logging
 import operator
+import os
 import re
+from six.moves import cPickle
 
 
 class Vocabulary(collections.Counter):
@@ -14,6 +17,9 @@ class Vocabulary(collections.Counter):
     FORMAT_TSV_WITHOUT_HEADERS = 2
 
     def trim(self, min_freq):
+        if min_freq < 2:
+            return
+
         for token in list(self.keys()):
             if self[token] < min_freq:
                 del self[token]
@@ -87,3 +93,65 @@ class Vocabulary(collections.Counter):
                 instance.update(data)
 
         return instance
+
+
+def _count_tokens(split_func, item_name):
+    parser = argparse.ArgumentParser(
+        description='Build {} frequency vocabulary from text documents'.format(item_name))
+    parser.add_argument(
+        'src_path',
+        type=str,
+        help='Path to directory with text files or path to single file')
+    parser.add_argument(
+        'vocab_file',
+        type=str,
+        help='Output vocabulary file')
+    parser.add_argument(
+        '-min_freq',
+        type=int,
+        default=1,
+        help='Minimum frequency to leave {} in vocabulary'.format(item_name))
+
+    argv, _ = parser.parse_known_args()
+    assert os.path.exists(argv.src_path)
+    assert 0 < argv.min_freq
+
+    logging.basicConfig(level=logging.INFO)
+
+    progress = 0
+    vocab = Vocabulary()
+
+    if os.path.isfile(argv.src_path):
+        if not argv.src_path.endswith('.txt'):
+            logging.info('Skipping {}'.format(argv.src_path))
+            return
+
+        with open(argv.src_path, 'rb') as sf:
+            content = sf.read().decode('utf-8')
+            content = split_func(content)
+            vocab.update(list(content))
+    else:
+        for root, _, files in os.walk(argv.src_path):
+            for file in files:
+                if not file.endswith('.txt'):
+                    logging.info('Skipping {}'.format(file))
+                    continue
+
+                with open(os.path.join(root, file), 'rb') as sf:
+                    content = sf.read().decode('utf-8')
+                    vocab.update(list(content))
+
+                progress += 1
+                if progress % 1000 == 0:
+                    logging.info('Processed {}K files'.format(progress // 1000))
+
+    vocab.trim(argv.min_freq)
+    vocab.save(argv.vocab_file, format=Vocabulary.FORMAT_TSV_WITH_HEADERS)
+
+
+def count_words():
+    _count_tokens(lambda content: content.split(), 'word')
+
+
+def count_chars():
+    _count_tokens(lambda content: list(content), 'character')
