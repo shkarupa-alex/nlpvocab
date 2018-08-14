@@ -123,7 +123,7 @@ def _count_tokens(split_func, item_name):
 
     if os.path.isfile(argv.src_path):
         if not argv.src_path.endswith('.txt'):
-            logging.info('Skipping {}'.format(argv.src_path))
+            logging.warn('Skipping {}'.format(argv.src_path))
             return
 
         with open(argv.src_path, 'rb') as sf:
@@ -134,7 +134,7 @@ def _count_tokens(split_func, item_name):
         for root, _, files in os.walk(argv.src_path):
             for file in files:
                 if not file.endswith('.txt'):
-                    logging.info('Skipping {}'.format(file))
+                    logging.warn('Skipping {}'.format(file))
                     continue
 
                 with open(os.path.join(root, file), 'rb') as sf:
