@@ -95,7 +95,7 @@ class Vocabulary(collections.Counter):
         return instance
 
 
-def _count_tokens(split_func, item_name):
+def _count_tokens(split_func, item_name, format=Vocabulary.FORMAT_TSV_WITH_HEADERS):
     parser = argparse.ArgumentParser(
         description='Build {} frequency vocabulary from text documents'.format(item_name))
     parser.add_argument(
@@ -107,6 +107,11 @@ def _count_tokens(split_func, item_name):
         type=str,
         help='Output vocabulary file')
     parser.add_argument(
+        '-batch_size',
+        type=int,
+        default=100,
+        help='Minimum frequency to leave {} in vocabulary'.format(item_name))
+    parser.add_argument(
         '-min_freq',
         type=int,
         default=1,
@@ -114,6 +119,7 @@ def _count_tokens(split_func, item_name):
 
     argv, _ = parser.parse_known_args()
     assert os.path.exists(argv.src_path)
+    assert 0 < argv.batch_size
     assert 0 < argv.min_freq
 
     logging.basicConfig(level=logging.INFO)
@@ -123,35 +129,44 @@ def _count_tokens(split_func, item_name):
 
     if os.path.isfile(argv.src_path):
         if not argv.src_path.endswith('.txt'):
-            logging.info('Skipping {}'.format(argv.src_path))
+            logging.warn('Skipping {}'.format(argv.src_path))
             return
 
         with open(argv.src_path, 'rb') as sf:
             content = sf.read().decode('utf-8')
-            content = split_func(content)
-            vocab.update(list(content))
+            items = split_func([content])
+            vocab.update(items)
     else:
+        doc_queue = []
         for root, _, files in os.walk(argv.src_path):
             for file in files:
                 if not file.endswith('.txt'):
-                    logging.info('Skipping {}'.format(file))
+                    logging.warn('Skipping {}'.format(file))
                     continue
 
                 with open(os.path.join(root, file), 'rb') as sf:
                     content = sf.read().decode('utf-8')
-                    vocab.update(list(content))
+                    doc_queue.append(content)
+
+                if len(doc_queue) == argv.batch_size:
+                    items = split_func(doc_queue)
+                    vocab.update(items)
+                    doc_queue = []
 
                 progress += 1
                 if progress % 1000 == 0:
                     logging.info('Processed {}K files'.format(progress // 1000))
 
+        items = split_func(doc_queue)
+        vocab.update(items)
+
     vocab.trim(argv.min_freq)
-    vocab.save(argv.vocab_file, format=Vocabulary.FORMAT_TSV_WITH_HEADERS)
+    vocab.save(argv.vocab_file, format=format)
 
 
 def count_words():
-    _count_tokens(lambda content: content.split(), 'word')
+    _count_tokens(lambda content_batch: [w for d in content_batch for w in d.split()], 'word')
 
 
 def count_chars():
-    _count_tokens(lambda content: list(content), 'character')
+    _count_tokens(lambda content_batch: list(''.join(content_batch)), 'character')
