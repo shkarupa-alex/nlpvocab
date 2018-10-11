@@ -129,24 +129,30 @@ def _count_tokens(split_func, item_name, format=Vocabulary.FORMAT_TSV_WITH_HEADE
 
     if os.path.isfile(argv.src_path):
         if not argv.src_path.endswith('.txt'):
-            logging.warn('Skipping {}'.format(argv.src_path))
+            logging.warning('Skipping {}'.format(argv.src_path))
             return
 
-        with open(argv.src_path, 'rb') as sf:
-            content = sf.read().decode('utf-8')
-            items = split_func([content])
-            vocab.update(items)
+        try:
+            with open(argv.src_path, 'rb') as sf:
+                content = sf.read().decode('utf-8')
+                items = split_func([content])
+                vocab.update(items)
+        except Exception as e:
+            logging.error(e)
     else:
         doc_queue = []
         for root, _, files in os.walk(argv.src_path):
             for file in files:
                 if not file.endswith('.txt'):
-                    logging.warn('Skipping {}'.format(file))
+                    logging.warning('Skipping {}'.format(file))
                     continue
 
-                with open(os.path.join(root, file), 'rb') as sf:
-                    content = sf.read().decode('utf-8')
-                    doc_queue.append(content)
+                try:
+                    with open(os.path.join(root, file), 'rb') as sf:
+                        content = sf.read().decode('utf-8')
+                        doc_queue.append(content)
+                except Exception as e:
+                    logging.error(e)
 
                 if len(doc_queue) == argv.batch_size:
                     items = split_func(doc_queue)
