@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import argparse
 import collections
+import gzip
 import logging
 import operator
 import os
@@ -12,9 +13,9 @@ from six.moves import cPickle
 
 
 class Vocabulary(collections.Counter):
-    FORMAT_BINARY_PICKLE = 0
-    FORMAT_TSV_WITH_HEADERS = 1
-    FORMAT_TSV_WITHOUT_HEADERS = 2
+    FORMAT_BINARY_PICKLE = 'binary_pickle'
+    FORMAT_TSV_WITH_HEADERS = 'tsv_with_headers'
+    FORMAT_TSV_WITHOUT_HEADERS = 'tsv_without_headers'
 
     def trim(self, min_freq):
         if min_freq < 2:
@@ -94,8 +95,43 @@ class Vocabulary(collections.Counter):
 
         return instance
 
+    def __add__(self, other):
+        return Vocabulary(super(Vocabulary, self).__add__(other))
 
-def _count_tokens(split_func, item_name, format=Vocabulary.FORMAT_TSV_WITH_HEADERS):
+    def __sub__(self, other):
+        return Vocabulary(super(Vocabulary, self).__sub__(other))
+
+    def __or__(self, other):
+        return Vocabulary(super(Vocabulary, self).__or__(other))
+
+    def __and__(self, other):
+        return Vocabulary(super(Vocabulary, self).__and__(other))
+
+    def __pos__(self):
+        raise NotImplementedError()
+
+    def __neg__(self):
+        raise NotImplementedError()
+
+
+def _read_content(file_name):
+    try:
+        if file_name.endswith('.txt'):
+            with open(file_name, 'rb') as f:
+                return f.read().decode('utf-8')
+
+        if file_name.endswith('.txt.gz'):
+            with gzip.open(file_name, 'rb') as f:
+                return f.read().decode('utf-8')
+    except Exception as e:
+        logging.error(e)
+
+    logging.warning('Skipping {}'.format(file_name))
+
+    return ''
+
+
+def _count_tokens(split_func, item_name):
     parser = argparse.ArgumentParser(
         description='Build {} frequency vocabulary from text documents'.format(item_name))
     parser.add_argument(
@@ -106,6 +142,15 @@ def _count_tokens(split_func, item_name, format=Vocabulary.FORMAT_TSV_WITH_HEADE
         'vocab_file',
         type=str,
         help='Output vocabulary file')
+    parser.add_argument(
+        '--file_format',
+        choices=[
+            Vocabulary.FORMAT_BINARY_PICKLE,
+            Vocabulary.FORMAT_TSV_WITH_HEADERS,
+            Vocabulary.FORMAT_TSV_WITHOUT_HEADERS
+        ],
+        default=Vocabulary.FORMAT_TSV_WITH_HEADERS,
+        help='Output file type')
     parser.add_argument(
         '-batch_size',
         type=int,
@@ -128,31 +173,15 @@ def _count_tokens(split_func, item_name, format=Vocabulary.FORMAT_TSV_WITH_HEADE
     vocab = Vocabulary()
 
     if os.path.isfile(argv.src_path):
-        if not argv.src_path.endswith('.txt'):
-            logging.warning('Skipping {}'.format(argv.src_path))
-            return
-
-        try:
-            with open(argv.src_path, 'rb') as sf:
-                content = sf.read().decode('utf-8')
-                items = split_func([content])
-                vocab.update(items)
-        except Exception as e:
-            logging.error(e)
+        content = _read_content(argv.src_path)
+        items = split_func([content])
+        vocab.update(items)
     else:
         doc_queue = []
         for root, _, files in os.walk(argv.src_path):
             for file in files:
-                if not file.endswith('.txt'):
-                    logging.warning('Skipping {}'.format(file))
-                    continue
-
-                try:
-                    with open(os.path.join(root, file), 'rb') as sf:
-                        content = sf.read().decode('utf-8')
-                        doc_queue.append(content)
-                except Exception as e:
-                    logging.error(e)
+                content = _read_content(os.path.join(root, file))
+                doc_queue.append(content)
 
                 if len(doc_queue) == argv.batch_size:
                     items = split_func(doc_queue)
@@ -167,7 +196,7 @@ def _count_tokens(split_func, item_name, format=Vocabulary.FORMAT_TSV_WITH_HEADE
         vocab.update(items)
 
     vocab.trim(argv.min_freq)
-    vocab.save(argv.vocab_file, format=format)
+    vocab.save(argv.vocab_file, format=argv.file_format)
 
 
 def count_words():
