@@ -30,8 +30,10 @@ class TestVocabulary(unittest.TestCase):
     def testTrim(self):
         vocab = Vocabulary()
         vocab.update(['1', ' ', '2', ' ', '1', '\n', '2', '\t', '3', '.'])
-        vocab.trim(2)
+        trimmed = vocab.trim(2)
         self.assertEqual([' ', '1', '2'], vocab.tokens())
+        self.assertIsInstance(trimmed, Vocabulary)
+        self.assertEqual(['\t', '\n', '.', '3'], trimmed.tokens())
 
     def testSaveLoadPickle(self):
         vocab_filename = os.path.join(self.temp_dir, 'vocab.pkl')
