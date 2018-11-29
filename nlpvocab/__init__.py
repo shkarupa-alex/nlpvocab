@@ -19,13 +19,18 @@ class Vocabulary(collections.Counter):
     FORMAT_TSV_WITH_HEADERS = 'TSV_WITH_HEADERS'
     FORMAT_TSV_WITHOUT_HEADERS = 'TSV_WITHOUT_HEADERS'
 
-    def trim(self, min_freq):
-        if min_freq < 2:
-            return
+    def trim(self, min_keep_freq):
+        result = Vocabulary()
+
+        if min_keep_freq < 2:
+            return result
 
         for token in list(self.keys()):
-            if self[token] < min_freq:
+            if self[token] < min_keep_freq:
+                result[token] = self[token]
                 del self[token]
+
+        return result
 
     def tokens(self):
         result = self.most_common()
