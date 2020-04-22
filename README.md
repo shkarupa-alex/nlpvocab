@@ -7,7 +7,6 @@ Provides 2 command-line scripts for building words and characters frequency voca
 
 ## Usage from Python
 
-
 ```python
 
 from nlpvocab import Vocabulary
@@ -19,9 +18,7 @@ vocab.update(text.split())
 vocab.save('vocab.tsv', format=Vocabulary.FORMAT_TSV_WITH_HEADERS)
 ```
 
-
 ## Usage from command line
-
 
 ```bash
 
