@@ -27,13 +27,37 @@ class TestVocabulary(unittest.TestCase):
         vocab.update(['1', ' ', '2', ' ', '1', '\n', '2', '\t', '3', '.'])
         self.assertEqual([' ', '1', '2', '\t', '\n', '.', '3'], vocab.tokens())
 
-    def testTrim(self):
+    def testTrim1(self):
+        vocab = Vocabulary()
+        vocab.update(['1', ' ', '2', ' ', '1', '\n', '2', '\t', '3', '.'])
+        trimmed = vocab.trim(1)
+        self.assertEqual([' ', '1', '2', '\t', '\n', '.', '3'], vocab.tokens())
+        self.assertIsInstance(trimmed, Vocabulary)
+        self.assertEqual([], trimmed.tokens())
+
+    def testTrim2(self):
         vocab = Vocabulary()
         vocab.update(['1', ' ', '2', ' ', '1', '\n', '2', '\t', '3', '.'])
         trimmed = vocab.trim(2)
         self.assertEqual([' ', '1', '2'], vocab.tokens())
         self.assertIsInstance(trimmed, Vocabulary)
         self.assertEqual(['\t', '\n', '.', '3'], trimmed.tokens())
+
+    def testSplit1(self):
+        vocab = Vocabulary()
+        vocab.update(['1', ' ', '2', ' ', '1', '\n', '2', '\t', '3', '.'])
+        high, low = vocab.split(1)
+        self.assertEqual([' ', '1', '2', '\t', '\n', '.', '3'], high.tokens())
+        self.assertIsInstance(low, Vocabulary)
+        self.assertEqual([], low.tokens())
+
+    def testSplit2(self):
+        vocab = Vocabulary()
+        vocab.update(['1', ' ', '2', ' ', '1', '\n', '2', '\t', '3', '.'])
+        high, low = vocab.split(2)
+        self.assertEqual([' ', '1', '2'], high.tokens())
+        self.assertIsInstance(low, Vocabulary)
+        self.assertEqual(['\t', '\n', '.', '3'], low.tokens())
 
     def testSaveLoadPickle(self):
         vocab_filename = os.path.join(self.temp_dir, 'vocab.pkl')
