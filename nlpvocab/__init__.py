@@ -32,6 +32,20 @@ class Vocabulary(collections.Counter):
 
         return result
 
+    def split(self, min_high_freq):
+        high, low = Vocabulary(), Vocabulary()
+
+        if min_high_freq < 2:
+            return Vocabulary(self), low
+
+        for token in list(self.keys()):
+            if self[token] >= min_high_freq:
+                high[token] = self[token]
+            else:
+                low[token] = self[token]
+
+        return high, low
+
     def tokens(self):
         result = self.most_common()
         if not len(result):
@@ -47,11 +61,12 @@ class Vocabulary(collections.Counter):
         return list(result)
 
     def save(self, filename, format=FORMAT_BINARY_PICKLE):
-        assert format in [
+        if format not in [
             Vocabulary.FORMAT_BINARY_PICKLE,
             Vocabulary.FORMAT_TSV_WITH_HEADERS,
             Vocabulary.FORMAT_TSV_WITHOUT_HEADERS,
-        ]
+        ]:
+            raise ValueError('Unsupported format')
 
         with open(filename, 'wb') as fout:
             if Vocabulary.FORMAT_BINARY_PICKLE == format:
@@ -72,11 +87,12 @@ class Vocabulary(collections.Counter):
 
     @staticmethod
     def load(filename, format=FORMAT_BINARY_PICKLE):
-        assert format in [
+        if format not in [
             Vocabulary.FORMAT_BINARY_PICKLE,
             Vocabulary.FORMAT_TSV_WITH_HEADERS,
             Vocabulary.FORMAT_TSV_WITHOUT_HEADERS,
-        ]
+        ]:
+            raise ValueError('Unsupported format')
 
         with open(filename, 'rb') as fin:
             if Vocabulary.FORMAT_BINARY_PICKLE == format:
@@ -193,13 +209,18 @@ def count_tokens(split_func, item_name, unicode_norm=None, lower_case=None):
         help='Minimum frequency to leave {} in vocabulary'.format(item_name))
 
     argv, _ = parser.parse_known_args()
-    assert os.path.exists(argv.src_path)
+    if not os.path.exists(argv.src_path):
+        raise IOError('Source path does not exist')
+
     if hasattr(argv, 'unicode_norm'):
         unicode_norm = argv.unicode_norm
     if hasattr(argv, 'lower_case'):
         lower_case = argv.lower_case
-    assert 0 < argv.batch_size
-    assert 0 < argv.min_freq
+
+    if 0 >= argv.batch_size:
+        raise ValueError('Batch size should be positive')
+    if 0 >= argv.min_freq:
+        raise ValueError('Minimum frequency should be positive')
 
     logging.basicConfig(level=logging.INFO)
 
