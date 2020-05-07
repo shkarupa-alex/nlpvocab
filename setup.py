@@ -20,12 +20,12 @@ setup(
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'nlpvocab-words=nlpvocab:count_words',
-            'nlpvocab-chars=nlpvocab:count_chars',
+            'nlpvocab-words=nlpvocab.cli:count_words',
+            'nlpvocab-chars=nlpvocab.cli:count_chars',
         ],
     },
-    test_suite='nose.collector',
-    tests_require=['nose'],
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
